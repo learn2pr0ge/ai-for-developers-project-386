@@ -1,0 +1,55 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium with system deps
+        run: npx playwright install --with-deps chromium
+
+      # Playwright сам поднимает оба сервера через webServer (см. playwright.config.ts):
+      #   - backend: e2e/scripts/start-backend.sh создаёт .venv, ставит
+      #     зависимости из requirements.txt и запускает Flask на :3000;
+      #   - frontend: npm run dev (Vite на :5173) c VITE_API_URL=http://localhost:3000.
+      # В CI reuseExistingServer=false, поэтому серверы стартуют с нуля.
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

@@ -1,0 +1,3 @@
+# Симлинк на mock/node_modules, нужный компилятору TypeSpec для резолва
+# импортов из api.tsp (см. mock/scripts/link-modules.mjs).
+/node_modules
